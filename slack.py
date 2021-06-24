@@ -37,7 +37,7 @@ async def send_plot_link(ack: AsyncAck, say: AsyncSay):
     blocks = [
         {
             "type": "image",
-            "image_url": "http://localhost:8000/df/canada.png",
+            "image_url": "http://localhost:8000/df/any.png",
             "alt_text": "inspiration",
         }
     ]
@@ -74,7 +74,7 @@ async def call_plot_api(
     await ack()
 
     async with aiohttp.ClientSession() as session:
-        url = "http://localhost:8000/df/canada.png"
+        url = "http://localhost:8000/df/any.png"
         async with session.get(url) as resp:
             if resp.status != 200:
                 await say("error connecting to api server")
