@@ -1,4 +1,8 @@
 # Slack Socket Image Demo
+A demo of a slack bot running in socket mode sharing dynamically generated graph plots.
+
+## Example
+![screen shot](docs/images/screen_shot.png)
 
 ## How to run
 
