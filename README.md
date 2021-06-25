@@ -45,6 +45,7 @@ Slash commands:
 - /echo
 - /plot
 - /inline-plot
+- /advanced-search
 ```
 
 **Remember to reinstall app in workspace after setting up the new scopes**
