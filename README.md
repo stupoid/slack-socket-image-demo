@@ -1,8 +1,12 @@
 # Slack Socket Image Demo
+
 A demo of a slack bot running in socket mode sharing dynamically generated graph plots.
 
 ## Example
-![screen shot](docs/images/screen_shot.png)
+
+![Slack bot sending image on demand](docs/images/screen_shot_1.png)
+
+---
 
 ## How to run
 
@@ -25,19 +29,23 @@ export SLACK_BOT_TOKEN='xoxb-***'
 
 ### 3. Add the required scopes and slash commands in Slack api dashboard
 
-OAuth & Permissions > Scopes > Bot Token Scopes
+> slack api dashboard | OAuth & Permissions > Scopes > Bot Token Scopes
 
+```yaml
 - app_mentions:read
 - chat:write
 - commands
 - files:write
+```
 
 Slash commands:
 
+```yaml
 - /hello-socket-mode
 - /echo
 - /plot
 - /inline-plot
+```
 
 **Remember to reinstall app in workspace after setting up the new scopes**
 
@@ -70,3 +78,11 @@ Try the `/plot` command test out the image generation flow.
 ## Caveats
 
 As mentioned in the [code](slack.py#L51-L73), there are a couple of caveats when sharing images as a bot.
+
+---
+
+# Extras
+
+Added some demo of search and run action workflow
+
+![Slack bot handling workflow](docs/images/screen_shot_2.png)

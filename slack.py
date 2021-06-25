@@ -14,10 +14,14 @@ Slash commands:
 - /echo
 - /plot
 - /inline-plot
+- /advanced-search
 """
 
 import asyncio
-from typing import Any, Dict
+import json
+import random
+import string
+from typing import Any, Dict, List
 
 import aiohttp
 from slack_bolt.adapter.socket_mode.async_handler import AsyncSocketModeHandler
@@ -28,6 +32,102 @@ from slack_sdk.errors import SlackApiError
 from slack_sdk.web.async_client import AsyncWebClient
 
 app = AsyncApp()
+
+
+def encode_data(data: Dict[str, Any]) -> str:
+    """adapter for dict->str usage in block action values"""
+    return json.dumps(data)
+
+
+def decode_data(data_str: str) -> Dict[str, Any]:
+    """adapter for str->dict usage in block action values"""
+    return json.loads(data_str)
+
+
+async def get_data(search_term: str, count: int = 5) -> Dict[str, str]:
+    """mock api call"""
+    results = {search_term: "127.0.0.1"}
+    for _ in range(count - 1):
+        random_username = search_term + random.choice(string.ascii_lowercase)
+        random_ip = ".".join(str(random.randint(0, 255)) for _ in range(4))
+        results[random_username] = random_ip
+    await asyncio.sleep(0.3)
+    return results
+
+
+@app.action("clear_cache")  # type: ignore
+async def handle_clear_cache_action(ack: AsyncAck, say: AsyncSay, body: Dict[str, Any]):
+    await ack()
+    data = decode_data(body["actions"][0]["value"])
+    await say(
+        f"Clearing cache for *{data['username']}*: Client IP: `{data['ip_addr']}`"
+    )
+
+
+@app.action("advanced_search")  # type: ignore
+async def handle_advanced_search_action(
+    ack: AsyncAck, say: AsyncSay, body: Dict[str, Any]
+):
+    search_term = body["actions"][0]["value"]
+    await ack(f"Got it. Looking up {search_term}")
+    results = await get_data(search_term)
+    blocks: List[Dict[str, Any]] = [
+        {
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "emoji": True,
+                "text": f"Here are the results for {search_term}",
+            },
+        },
+        {"type": "divider"},
+    ]
+    for username, ip_addr in results.items():
+        blocks.append(
+            {
+                "type": "section",
+                "text": {
+                    "type": "mrkdwn",
+                    "text": f"*{username}*\nClient IP: `{ip_addr}`",
+                },
+                "accessory": {
+                    "type": "button",
+                    "text": {
+                        "type": "plain_text",
+                        "emoji": True,
+                        "text": "Clear Cache",
+                    },
+                    "action_id": f"clear_cache",
+                    "value": encode_data({"username": username, "ip_addr": ip_addr}),
+                },
+            }
+        )
+
+    await say(blocks=blocks, text="results")
+
+
+@app.command("/advanced-search")  # type: ignore
+async def handle_advanced_search_command(ack: AsyncAck):
+    blocks = [
+        {
+            "type": "section",
+            "text": {
+                "type": "plain_text",
+                "text": "Find users by keyword",
+                "emoji": True,
+            },
+        },
+        {
+            "dispatch_action": True,
+            "type": "input",
+            "element": {
+                "type": "plain_text_input",
+                "action_id": "advanced_search",
+            },
+            "label": {"type": "plain_text", "text": "Advanced Search 🔍", "emoji": True},
+        },
+    ]
+    await ack(blocks=blocks, text="search input")
 
 
 @app.command("/inline-plot")  # type: ignore
@@ -48,7 +148,7 @@ async def send_plot_link(ack: AsyncAck, say: AsyncSay):
 async def call_plot_api(
     ack: AsyncAck, say: AsyncSay, client: AsyncWebClient, body: Dict[str, str]
 ):
-    """ Shares plot image by downloading image from fastapi server and uploading to slack
+    """Shares plot image by downloading image from fastapi server and uploading to slack
     This slackoverflow answer has the steps required
     ref: https://stackoverflow.com/a/58189401
 
@@ -56,7 +156,7 @@ async def call_plot_api(
     1. To send image in blocks (structured fancy messages), it has to be a public url (slack needs to be able to fetch it)
     2. Uploaded files are not considered public accessible until files.sharedPublicURL is called
     3. Bots can not call files.sharedPublicURL API
-    
+
     Potential workaround (never tried, not reccomended)
     4. Start up a user client
     5. Bot client pass file id to user client
@@ -87,18 +187,18 @@ async def call_plot_api(
                 await say(f"error downloading file: {e}")
                 return
 
-            try:
-                await say(f"uploading file to slack")
-                results = await client.files_upload(file=img_bytes)
-            except SlackApiError as e:
-                await say(f"error uploading file: {e}")
-                return
+    try:
+        await say(f"uploading file to slack")
+        results = await client.files_upload(file=img_bytes)
+    except SlackApiError as e:
+        await say(f"error uploading file: {e}")
+        return
 
-            if not results["ok"]:
-                await say("something went terribly wrong")
-                await say(f"```{results}```")
-            else:
-                await say(results["file"]["permalink"])
+    if not results["ok"]:
+        await say("something went terribly wrong")
+        await say(f"```{results}```")
+    else:
+        await say(results["file"]["permalink"])
 
 
 @app.command("/hello-socket-mode")  # type: ignore
